@@ -1,0 +1,7 @@
+Namespace(exp_name='pct_baseline', model='pct', dataset='modelnet40', batch_size=32, test_batch_size=16, epochs=1, use_sgd=False, lr=0.0001, momentum=0.9, no_cuda=False, seed=1, eval=False, num_points=1024, dropout=0.5, model_path='')
+Using GPU : 0 from 4 devices
+Use Adam
+train total time is 45.5753915309906
+Train 0, loss: 3.293528, train acc: 0.230965, train avg acc: 0.097690
+test total time is 6.335851192474365
+Test 0, loss: 2.937540, test acc: 0.371151, test avg acc: 0.229000

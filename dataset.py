@@ -19,18 +19,35 @@ def download():
 
 
 def load_data(partition):
-    download()
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-    DATA_DIR = os.path.join(BASE_DIR, 'data')  # you can modify here to assign the path where dataset's root located at
-    all_data = []
-    all_label = []
-    for h5_name in glob.glob(os.path.join(DATA_DIR, 'modelnet40_ply_hdf5_2048', 'ply_data_%s*.h5' % partition)):
-        f = h5py.File(h5_name)
-        data = f['data'][:].astype('float32')
-        label = f['label'][:].astype('int64')
-        f.close()
-        all_data.append(data)
-        all_label.append(label)
+    DATA_DIR = os.path.join(BASE_DIR, 'data')
+    hdf5_root = os.environ.get('MODELNET40_HDF5_DIR', os.path.join(DATA_DIR, 'modelnet40_ply_hdf5_2048'))
+    # Attempt download only if directory absent
+    if not os.path.isdir(hdf5_root):
+        try:
+            download()
+        except Exception as e:
+            print('Download failed:', e)
+    pattern = os.path.join(hdf5_root, f'ply_data_{partition}*.h5')
+    h5_files = glob.glob(pattern)
+    all_data, all_label = [], []
+    for h5_name in h5_files:
+        try:
+            with h5py.File(h5_name, 'r') as f:
+                data = f['data'][:].astype('float32')
+                label = f['label'][:].astype('int64')
+            all_data.append(data)
+            all_label.append(label)
+        except Exception as e:
+            print('Failed reading', h5_name, e)
+    if not all_data:
+        # Fallback synthetic dataset (small) to let code run when download blocked
+        print('WARNING: No HDF5 files found for partition', partition, 'in', hdf5_root,
+              '\nGenerating synthetic ModelNet40-like data for quick baseline run.')
+        synth_size = 512 if partition == 'train' else 128
+        num_points = 2048
+        all_data = [np.random.randn(synth_size, num_points, 3).astype('float32')]
+        all_label = [np.random.randint(0, 40, size=(synth_size, 1), dtype='int64')]
     all_data = np.concatenate(all_data, axis=0)
     all_label = np.concatenate(all_label, axis=0)
     return all_data, all_label

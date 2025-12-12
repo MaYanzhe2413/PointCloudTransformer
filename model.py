@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from module import Embedding, NeighborEmbedding, OA, SA
+from module import Embedding, NeighborEmbedding, NeighborEmbeddingKDTree, OA, SA
 
 
 class NaivePCT(nn.Module):
@@ -108,6 +108,33 @@ class PCT(nn.Module):
         x_max = torch.max(x, dim=-1)[0]
         x_mean = torch.mean(x, dim=-1)
 
+        return x, x_max, x_mean
+
+
+class PCTKDTree(nn.Module):
+    def __init__(self, samples=[512, 256], leaf_size=64, strategy='random'):
+        super().__init__()
+        self.neighbor_embedding = NeighborEmbeddingKDTree(samples=samples, leaf_size=leaf_size, strategy=strategy)
+        self.oa1 = OA(256)
+        self.oa2 = OA(256)
+        self.oa3 = OA(256)
+        self.oa4 = OA(256)
+        self.linear = nn.Sequential(
+            nn.Conv1d(1280, 1024, kernel_size=1, bias=False),
+            nn.BatchNorm1d(1024),
+            nn.LeakyReLU(negative_slope=0.2)
+        )
+
+    def forward(self, x):
+        x = self.neighbor_embedding(x)
+        x1 = self.oa1(x)
+        x2 = self.oa2(x1)
+        x3 = self.oa3(x2)
+        x4 = self.oa4(x3)
+        x = torch.cat([x, x1, x2, x3, x4], dim=1)
+        x = self.linear(x)
+        x_max = torch.max(x, dim=-1)[0]
+        x_mean = torch.mean(x, dim=-1)
         return x, x_max, x_mean
 
 
@@ -240,6 +267,18 @@ class PCTCls(nn.Module):
         self.encoder = PCT()
         self.cls = Classification(num_categories)
     
+    def forward(self, x):
+        _, x, _ = self.encoder(x)
+        x = self.cls(x)
+        return x
+
+
+class PCTKDTCls(nn.Module):
+    def __init__(self, num_categories=40, leaf_size=64, strategy='random'):
+        super().__init__()
+        self.encoder = PCTKDTree(leaf_size=leaf_size, strategy=strategy)
+        self.cls = Classification(num_categories)
+
     def forward(self, x):
         _, x, _ = self.encoder(x)
         x = self.cls(x)

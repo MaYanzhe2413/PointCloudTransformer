@@ -11,13 +11,16 @@ from torch.utils.data import DataLoader
 from torch.optim.lr_scheduler import CosineAnnealingLR
 
 from dataset import ModelNet40
-from model import NaivePCTCls, SPCTCls, PCTCls
+from model import NaivePCTCls, SPCTCls, PCTCls, PCTKDTCls
 from util import cal_loss, Logger
 
 
-models = {'navie_pct': NaivePCTCls,
-          'spct': SPCTCls,
-          'pct': PCTCls}
+models = {
+    'navie_pct': NaivePCTCls,
+    'spct': SPCTCls,
+    'pct': PCTCls,
+    'pct_kdtree': PCTKDTCls,
+}
 
 
 def _init_(args):
@@ -37,8 +40,12 @@ def train(args, io):
 
     device = torch.device("cuda" if args.cuda else "cpu")
 
-    model = models[args.model]().to(device)
-    model = nn.DataParallel(model)
+    if args.model == 'pct_kdtree':
+        model = models[args.model](leaf_size=args.leaf_size).to(device)
+    else:
+        model = models[args.model]().to(device)
+    if args.cuda and torch.cuda.device_count() > 1:
+        model = nn.DataParallel(model)
 
     if args.use_sgd:
         print("Use SGD")
@@ -136,7 +143,10 @@ def test(args, io):
 
     device = torch.device("cuda" if args.cuda else "cpu")
 
-    model = models[args.model]().to(device)
+    if args.model == 'pct_kdtree':
+        model = models[args.model](leaf_size=args.leaf_size).to(device)
+    else:
+        model = models[args.model]().to(device)
     model = nn.DataParallel(model) 
     
     model.load_state_dict(torch.load(args.model_path))
@@ -166,7 +176,17 @@ if __name__ == "__main__":
     parser.add_argument('--exp_name', type=str, default='exp', metavar='N',
                         help='Name of the experiment')
     parser.add_argument('--model', type=str, default='pct', choices=['navie_pct', 'spct', 'pct'],
+    parser.add_argument('--model', type=str, default='pct', choices=['navie_pct', 'spct', 'pct', 'pct_kdtree'],
                         help='which model you want to use')
+    parser.add_argument('--leaf_size', type=int, default=64, help='KDTree leaf size when using pct_kdtree')
+        if args.model == 'pct_kdtree':
+            model = models[args.model](leaf_size=args.leaf_size).to(device)
+        else:
+            model = models[args.model]().to(device)
+        if args.model == 'pct_kdtree':
+            model = models[args.model](leaf_size=args.leaf_size).to(device)
+        else:
+            model = models[args.model]().to(device)
     parser.add_argument('--dataset', type=str, default='modelnet40', metavar='N',
                         choices=['modelnet40'])
     parser.add_argument('--batch_size', type=int, default=32, metavar='batch_size',
@@ -175,7 +195,8 @@ if __name__ == "__main__":
                         help='Size of batch)')
     parser.add_argument('--epochs', type=int, default=250, metavar='N',
                         help='number of episode to train ')
-    parser.add_argument('--use_sgd', type=bool, default=True,
+    # Use flag (default False => Adam, add --use_sgd to enable SGD)
+    parser.add_argument('--use_sgd', action='store_true', default=False,
                         help='Use SGD')
     parser.add_argument('--lr', type=float, default=0.0001, metavar='LR',
                         help='learning rate (default: 0.001, 0.1 if using sgd)')

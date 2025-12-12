@@ -1,0 +1,47 @@
+Will not apply HSTS. The HSTS database must be a regular and non-world-writable file.
+ERROR: could not open HSTS store at '/root/.wget-hsts'. HSTS will be disabled.
+--2025-11-20 15:25:10--  https://shapenet.cs.stanford.edu/media/modelnet40_ply_hdf5_2048.zip
+Resolving shapenet.cs.stanford.edu (shapenet.cs.stanford.edu)... 171.67.77.19
+Connecting to shapenet.cs.stanford.edu (shapenet.cs.stanford.edu)|171.67.77.19|:443... failed: Connection refused.
+unzip:  cannot find or open modelnet40_ply_hdf5_2048.zip, modelnet40_ply_hdf5_2048.zip.zip or modelnet40_ply_hdf5_2048.zip.ZIP.
+mv: cannot stat 'modelnet40_ply_hdf5_2048': No such file or directory
+rm: cannot remove 'modelnet40_ply_hdf5_2048.zip': No such file or directory
+Will not apply HSTS. The HSTS database must be a regular and non-world-writable file.
+ERROR: could not open HSTS store at '/root/.wget-hsts'. HSTS will be disabled.
+--2025-11-20 15:25:10--  https://shapenet.cs.stanford.edu/media/modelnet40_ply_hdf5_2048.zip
+Resolving shapenet.cs.stanford.edu (shapenet.cs.stanford.edu)... 171.67.77.19
+Connecting to shapenet.cs.stanford.edu (shapenet.cs.stanford.edu)|171.67.77.19|:443... failed: Connection refused.
+unzip:  cannot find or open modelnet40_ply_hdf5_2048.zip, modelnet40_ply_hdf5_2048.zip.zip or modelnet40_ply_hdf5_2048.zip.ZIP.
+mv: cannot stat 'modelnet40_ply_hdf5_2048': No such file or directory
+rm: cannot remove 'modelnet40_ply_hdf5_2048.zip': No such file or directory
+Namespace(exp_name='pct_baseline_synth', model='pct', dataset='modelnet40', batch_size=32, test_batch_size=16, epochs=2, use_sgd=True, lr=0.0001, momentum=0.9, no_cuda=False, seed=1, eval=False, num_points=1024, dropout=0.5, model_path='')
+Using GPU : 0 from 4 devices
+WARNING: No HDF5 files found for partition train in /workspace/PointCloudTransformer/data/modelnet40_ply_hdf5_2048 
+Generating synthetic ModelNet40-like data for quick baseline run.
+WARNING: No HDF5 files found for partition test in /workspace/PointCloudTransformer/data/modelnet40_ply_hdf5_2048 
+Generating synthetic ModelNet40-like data for quick baseline run.
+Use SGD
+Traceback (most recent call last):
+  File "/workspace/PointCloudTransformer/cls.py", line 213, in <module>
+    train(args, io)
+  File "/workspace/PointCloudTransformer/cls.py", line 70, in train
+    logits = model(data)
+  File "/opt/conda/envs/pointnext/lib/python3.9/site-packages/torch/nn/modules/module.py", line 1102, in _call_impl
+    return forward_call(*input, **kwargs)
+  File "/opt/conda/envs/pointnext/lib/python3.9/site-packages/torch/nn/parallel/data_parallel.py", line 158, in forward
+    inputs, kwargs = self.scatter(inputs, kwargs, self.device_ids)
+  File "/opt/conda/envs/pointnext/lib/python3.9/site-packages/torch/nn/parallel/data_parallel.py", line 175, in scatter
+    return scatter_kwargs(inputs, kwargs, device_ids, dim=self.dim)
+  File "/opt/conda/envs/pointnext/lib/python3.9/site-packages/torch/nn/parallel/scatter_gather.py", line 44, in scatter_kwargs
+    inputs = scatter(inputs, target_gpus, dim) if inputs else []
+  File "/opt/conda/envs/pointnext/lib/python3.9/site-packages/torch/nn/parallel/scatter_gather.py", line 36, in scatter
+    res = scatter_map(inputs)
+  File "/opt/conda/envs/pointnext/lib/python3.9/site-packages/torch/nn/parallel/scatter_gather.py", line 23, in scatter_map
+    return list(zip(*map(scatter_map, obj)))
+  File "/opt/conda/envs/pointnext/lib/python3.9/site-packages/torch/nn/parallel/scatter_gather.py", line 19, in scatter_map
+    return Scatter.apply(target_gpus, None, dim, obj)
+  File "/opt/conda/envs/pointnext/lib/python3.9/site-packages/torch/nn/parallel/_functions.py", line 96, in forward
+    outputs = comm.scatter(input, target_gpus, chunk_sizes, ctx.dim, streams)
+  File "/opt/conda/envs/pointnext/lib/python3.9/site-packages/torch/nn/parallel/comm.py", line 189, in scatter
+    return tuple(torch._C._scatter(tensor, devices, chunk_sizes, dim, streams))
+KeyboardInterrupt

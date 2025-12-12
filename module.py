@@ -4,6 +4,9 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from util import sample_and_knn_group
+from util import sample_and_kdtree_simple_group
+from util import kdtree_sample_centers
+from util import knn_point, index_points
 
 
 class Embedding(nn.Module):
@@ -115,6 +118,37 @@ class SG(nn.Module):
         return new_xyz, new_feature
 
 
+class KDSG(nn.Module):
+    """KD-Tree simple Sampling and Grouping module."""
+
+    def __init__(self, s, in_channels, out_channels, leaf_size=64, strategy='random'):
+        super(KDSG, self).__init__()
+        self.s = s
+        self.leaf_size = leaf_size
+        self.strategy = strategy
+        self.conv1 = nn.Conv1d(in_channels, out_channels, kernel_size=1, bias=False)
+        self.conv2 = nn.Conv1d(out_channels, out_channels, kernel_size=1, bias=False)
+        self.bn1 = nn.BatchNorm1d(out_channels)
+        self.bn2 = nn.BatchNorm1d(out_channels)
+
+    def forward(self, x, coords):
+        x = x.permute(0, 2, 1)  # [B,N,in]
+        center_idx = kdtree_sample_centers(self.s, coords, leaf_size=self.leaf_size, strategy=self.strategy)  # [B,s]
+        new_xyz = index_points(coords, center_idx)  # [B,s,3]
+        center_feats = index_points(x, center_idx)  # [B,s,in]
+        knn_idx = knn_point(32, coords, new_xyz)    # [B,s,32]
+        grouped = index_points(x, knn_idx)          # [B,s,32,in]
+        center_expand = center_feats.unsqueeze(2).expand(-1, -1, grouped.size(2), -1)
+        agg = torch.cat([grouped - center_expand, center_expand], dim=-1)  # [B,s,32,2*in]
+        agg = agg.permute(0,1,3,2).reshape(-1, agg.shape[3], 32)  # [B*s,2*in,32]
+        batch_size = agg.size(0)
+        agg = F.relu(self.bn1(self.conv1(agg)))
+        agg = F.relu(self.bn2(self.conv2(agg)))
+        agg = F.adaptive_max_pool1d(agg, 1).view(batch_size, -1)
+        agg = agg.reshape(coords.shape[0], self.s, -1).permute(0,2,1)
+        return new_xyz, agg
+
+
 class NeighborEmbedding(nn.Module):
     def __init__(self, samples=[512, 256]):
         super(NeighborEmbedding, self).__init__()
@@ -140,6 +174,25 @@ class NeighborEmbedding(nn.Module):
         xyz1, features1 = self.sg1(features, xyz)         # [B, 128, 512]
         _, features2 = self.sg2(features1, xyz1)          # [B, 256, 256]
 
+        return features2
+
+
+class NeighborEmbeddingKDTree(nn.Module):
+    def __init__(self, samples=[512, 256], leaf_size=64, strategy='random'):
+        super(NeighborEmbeddingKDTree, self).__init__()
+        self.conv1 = nn.Conv1d(3, 64, kernel_size=1, bias=False)
+        self.conv2 = nn.Conv1d(64, 64, kernel_size=1, bias=False)
+        self.bn1 = nn.BatchNorm1d(64)
+        self.bn2 = nn.BatchNorm1d(64)
+        self.sg1 = KDSG(s=samples[0], in_channels=128, out_channels=128, leaf_size=leaf_size, strategy=strategy)
+        self.sg2 = KDSG(s=samples[1], in_channels=256, out_channels=256, leaf_size=leaf_size, strategy=strategy)
+
+    def forward(self, x):
+        xyz = x.permute(0, 2, 1)
+        features = F.relu(self.bn1(self.conv1(x)))
+        features = F.relu(self.bn2(self.conv2(features)))
+        xyz1, features1 = self.sg1(features, xyz)
+        _, features2 = self.sg2(features1, xyz1)
         return features2
 
 

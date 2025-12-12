@@ -1,0 +1,7 @@
+checkpoints/
+data/
+__pycache__/
+
+pointnet2_ops_lib/build/
+pointnet2_ops_lib/dist/
+pointnet2_ops_lib/pointnet2_ops.egg-info/
